@@ -73,7 +73,9 @@ def run_proc(cmd, done: Callable) -> subprocess.Popen:
         else:
             done()
 
-    p = subprocess.Popen(cmd)
+    arm_env = os.environ.copy()
+    arm_env["ARM_SDKPATH"] = arm.utils.get_sdk_path()
+    p = subprocess.Popen(cmd, env=arm_env)
 
     if use_thread:
         threading.Thread(target=wait_for_proc, args=(p,)).start()
@@ -130,8 +132,8 @@ def export_data(fp, sdk_path):
         if os.path.isdir(build_dir + '/compiled/Shaders'):
             shutil.rmtree(build_dir + '/compiled/Shaders', onerror=remove_readonly)
 
-    raw_shaders_path = sdk_path + '/armory/Shaders/'
-    assets_path = sdk_path + '/armory/Assets/'
+    raw_shaders_path = sdk_path + '/lib/armory/Shaders/'
+    assets_path = sdk_path + '/lib/armory/Assets/'
     export_physics = bpy.data.worlds['Arm'].arm_physics != 'Disabled'
     export_navigation = bpy.data.worlds['Arm'].arm_navigation != 'Disabled'
     export_ui = bpy.data.worlds['Arm'].arm_ui != 'Disabled'
@@ -279,13 +281,12 @@ def compile(assets_only=False):
     # Set build command
     target_name = state.target
 
-    node_path = arm.utils.get_node_path()
-    khamake_path = arm.utils.get_khamake_path()
-    cmd = [node_path, khamake_path]
+    kmake_path = arm.utils.get_kmake_path()
+    cmd = [kmake_path, "--from", arm.utils.get_kha_path()]
 
     kha_target_name = arm.utils.get_kha_target(target_name)
-    if kha_target_name != '':
-        cmd.append(kha_target_name)
+    # if kha_target_name != '':
+    #     cmd.append(kha_target_name)
 
     # Custom exporter
     if state.is_export:
@@ -308,18 +309,18 @@ def compile(assets_only=False):
         vs_ver, vs_year, vs_name, vs_id = arm.utils.get_visual_studio_from_version(wrd.arm_project_win_list_vs)
         cmd.append(vs_id)
 
-    if arm.utils.get_legacy_shaders() or 'ios' in state.target:
-        if 'html5' in state.target or 'ios' in state.target:
-            pass
-        else:
-            cmd.append('--shaderversion')
-            cmd.append('110')
-    elif 'android' in state.target or 'html5' in state.target:
-        cmd.append('--shaderversion')
-        cmd.append('300')
-    else:
-        cmd.append('--shaderversion')
-        cmd.append('330')
+    # if arm.utils.get_legacy_shaders() or 'ios' in state.target:
+    #     if 'html5' in state.target or 'ios' in state.target:
+    #         pass
+    #     else:
+    #         cmd.append('--shaderversion')
+    #         cmd.append('110')
+    # elif 'android' in state.target or 'html5' in state.target:
+    #     cmd.append('--shaderversion')
+    #     cmd.append('300')
+    # else:
+    #     cmd.append('--shaderversion')
+    #     cmd.append('330')
 
     if '_VR' in wrd.world_defs:
         cmd.append('--vr')
@@ -334,9 +335,9 @@ def compile(assets_only=False):
         dxc_path = fp + '/HlslShaders/dxc.exe'
         subprocess.Popen([dxc_path, '-Zpr', '-Fo', fp + '/Bundled/raytrace.cso', '-T', 'lib_6_3', fp + '/HlslShaders/raytrace.hlsl']).wait()
 
-    if arm.utils.get_khamake_threads() > 1:
-        cmd.append('--parallelAssetConversion')
-        cmd.append(str(arm.utils.get_khamake_threads()))
+    # if arm.utils.get_khamake_threads() > 1:
+    #     cmd.append('--parallelAssetConversion')
+    #     cmd.append(str(arm.utils.get_khamake_threads()))
 
     compilation_server = False
 
@@ -350,11 +351,11 @@ def compile(assets_only=False):
     else:
         cmd.append(arm.utils.build_dir())
 
-    if not wrd.arm_verbose_output:
-        cmd.append("--quiet")
-    else:
-        print("Using project from " + arm.utils.get_fp())
-        print("Running: ", *cmd)
+    # if not wrd.arm_verbose_output:
+    #     cmd.append("--quiet")
+    # else:
+    #     print("Using project from " + arm.utils.get_fp())
+    #     print("Running: ", *cmd)
 
     #Project needs to be compiled at least once
     #before compilation server can work
@@ -391,7 +392,7 @@ def build(target, is_play=False, is_publish=False, is_export=False):
 
     # Get paths
     sdk_path = arm.utils.get_sdk_path()
-    raw_shaders_path = sdk_path + '/armory/Shaders/'
+    raw_shaders_path = sdk_path + '/lib/armory/Shaders/'
 
     # Set dir
     fp = arm.utils.get_fp()
@@ -589,18 +590,18 @@ def build_success():
             if state.target == 'krom-windows':
                 gapi = state.export_gapi
                 ext = '' if gapi == 'direct3d11' else '_' + gapi
-                krom_location = sdk_path + '/Krom/Krom' + ext + '.exe'
+                krom_location = sdk_path + '/bin/Krom' + ext + '.exe'
                 shutil.copy(krom_location, files_path + '/Krom.exe')
                 krom_exe = arm.utils.safestr(wrd.arm_project_name) + '.exe'
                 os.rename(files_path + '/Krom.exe', files_path + '/' + krom_exe)
             elif state.target == 'krom-linux':
-                krom_location = sdk_path + '/Krom/Krom'
+                krom_location = sdk_path + '/bin/Krom'
                 shutil.copy(krom_location, files_path)
                 krom_exe = arm.utils.safestr(wrd.arm_project_name)
                 os.rename(files_path + '/Krom', files_path + '/' + krom_exe)
                 krom_exe = './' + krom_exe
             else:
-                krom_location = sdk_path + '/Krom/Krom.app'
+                krom_location = sdk_path + '/bin/Krom.app'
                 shutil.copytree(krom_location, files_path + '/Krom.app')
                 game_files = os.listdir(files_path)
                 for f in game_files:

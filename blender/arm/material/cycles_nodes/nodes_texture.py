@@ -277,7 +277,7 @@ def parse_tex_musgrave(node: bpy.types.ShaderNodeTexMusgrave, out_socket: bpy.ty
 def parse_tex_noise(node: bpy.types.ShaderNodeTexNoise, out_socket: bpy.types.NodeSocket, state: ParserState) -> Union[floatstr, vec3str]:
     c.write_procedurals()
     state.curshader.add_function(c_functions.str_tex_noise)
-    c.assets_add(os.path.join(arm.utils.get_sdk_path(), 'armory', 'Assets', 'noise256.png'))
+    c.assets_add(os.path.join(arm.utils.get_sdk_path(), 'lib', 'armory', 'Assets', 'noise256.png'))
     c.assets_add_embedded_data('noise256.png')
     state.curshader.add_uniform('sampler2D snoise256', link='$noise256.png')
 
@@ -377,7 +377,7 @@ def parse_sky_hosekwilkie(node: bpy.types.ShaderNodeTexSky, state: ParserState) 
         # Radiance
         if rpdat.arm_radiance and rpdat.arm_irradiance and not mobile_mat:
             wrd.world_defs += '_Rad'
-            hosek_path = 'armory/Assets/hosek/'
+            hosek_path = 'lib/armory/Assets/hosek/'
             sdk_path = arm.utils.get_sdk_path()
             # Use fake maps for now
             assets.add(sdk_path + '/' + hosek_path + 'hosek_radiance.hdr')

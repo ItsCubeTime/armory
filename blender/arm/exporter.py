@@ -1,6 +1,6 @@
 """
 Armory Scene Exporter
-http://armory3d.org/
+https://armory3d.org/
 
 Based on Open Game Engine Exchange
 http://opengex.org/

@@ -205,7 +205,7 @@ def get_sdk_path():
         return os.path.normpath(addon_prefs.sdk_path)
 
 def get_last_commit():
-    p = get_sdk_path() + 'armory/.git/refs/heads/master'
+    p = get_sdk_path() + '/lib/armory/.git/refs/heads/master'
 
     try:
         file = open(p, 'r')
@@ -300,9 +300,9 @@ def get_node_path():
         return get_sdk_path() + '/nodejs/node-linux64'
 
 def get_kha_path():
-    if os.path.exists('Kha'):
-        return 'Kha'
-    return get_sdk_path() + '/Kha'
+    if os.path.exists('armorcore'):
+        return 'armorcore'
+    return get_sdk_path() + '/armorcore'
 
 def get_haxe_path():
     if get_os() == 'win':
@@ -312,19 +312,22 @@ def get_haxe_path():
     else:
         return get_kha_path() + '/Tools/haxe/haxe-linux64'
 
-def get_khamake_path():
-    return get_kha_path() + '/make'
+def get_kmake_path():
+    if get_os() == 'win':
+        return get_kha_path() + '/Kinc/make.bat'
+    else:
+        return get_kha_path() + '/Kinc/make'
 
 def krom_paths():
     sdk_path = get_sdk_path()
     if arm.utils.get_os() == 'win':
-        krom_location = sdk_path + '/Krom'
+        krom_location = sdk_path + '/bin'
         krom_path = krom_location + '/Krom.exe'
     elif arm.utils.get_os() == 'mac':
-        krom_location = sdk_path + '/Krom/Krom.app/Contents/MacOS'
+        krom_location = sdk_path + '/bin/Krom.app/Contents/MacOS'
         krom_path = krom_location + '/Krom'
     else:
-        krom_location = sdk_path + '/Krom'
+        krom_location = sdk_path + '/bin'
         krom_path = krom_location + '/Krom'
     return krom_location, krom_path
 
@@ -332,7 +335,7 @@ def fetch_bundled_script_names():
     wrd = bpy.data.worlds['Arm']
     wrd.arm_bundled_scripts_list.clear()
 
-    with WorkingDir(get_sdk_path() + '/armory/Sources/armory/trait'):
+    with WorkingDir(get_sdk_path() + '/lib/armory/Sources/armory/trait'):
         for file in glob.glob('*.hx'):
             wrd.arm_bundled_scripts_list.add().name = file.rsplit('.', 1)[0]
 
@@ -588,7 +591,7 @@ def fetch_bundled_trait_props():
     for o in bpy.data.objects:
         for t in o.arm_traitlist:
             if t.type_prop == 'Bundled Script':
-                file_path = get_sdk_path() + '/armory/Sources/armory/trait/' + t.name + '.hx'
+                file_path = get_sdk_path() + '/lib/armory/Sources/armory/trait/' + t.name + '.hx'
                 if os.path.exists(file_path):
                     fetch_script_props(file_path)
                     fetch_prop(o)
@@ -1091,7 +1094,7 @@ def get_visual_studio_from_version(version: str) -> str:
 def get_list_installed_vs(get_version: bool, get_name: bool, get_path: bool) -> []:
     err = ''
     items = []
-    path_file = os.path.join(get_sdk_path(), 'Kha', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
+    path_file = os.path.join(get_sdk_path(), 'armorcore', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
     if not os.path.isfile(path_file):
         err = 'File "'+ path_file +'" not found.'
         return items, err
@@ -1131,7 +1134,7 @@ def get_list_installed_vs(get_version: bool, get_name: bool, get_path: bool) -> 
 def get_list_installed_vs_version() -> []:
     err = ''
     items = []
-    path_file = os.path.join(get_sdk_path(), 'Kha', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
+    path_file = os.path.join(get_sdk_path(), 'armorcore', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
     if os.path.isfile(path_file):
         # Set arguments
         cmd = path_file + ' -nologo -property installationVersion'
@@ -1152,7 +1155,7 @@ def get_list_installed_vs_version() -> []:
 def get_list_installed_vs_name() -> []:
     err = ''
     items = []
-    path_file = os.path.join(get_sdk_path(), 'Kha', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
+    path_file = os.path.join(get_sdk_path(), 'armorcore', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
     if os.path.isfile(path_file):
         # Set arguments
         cmd = path_file + ' -nologo -property displayName'
@@ -1171,7 +1174,7 @@ def get_list_installed_vs_name() -> []:
 def get_list_installed_vs_path() -> []:
     err = ''
     items = []
-    path_file = os.path.join(get_sdk_path(), 'Kha', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
+    path_file = os.path.join(get_sdk_path(), 'armorcore', 'Kinc', 'Tools', 'kincmake', 'Data', 'windows', 'vswhere.exe')
     if os.path.isfile(path_file):
         # Set arguments
         cmd = path_file + ' -nologo -property installationPath'

@@ -135,7 +135,7 @@ def build():
         arm.api.drivers[rpdat.rp_driver]['make_rpath']()
         return
 
-    assets_path = arm.utils.get_sdk_path() + '/armory/Assets/'
+    assets_path = arm.utils.get_sdk_path() + '/lib/armory/Assets/'
     wrd = bpy.data.worlds['Arm']
 
     wrd.compo_defs = ''

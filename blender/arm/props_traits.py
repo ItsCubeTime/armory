@@ -67,7 +67,7 @@ def update_trait_group(self, context):
                 t.name = t.node_tree_prop.name
         # Fetch props
         if t.type_prop == 'Bundled Script' and t.name != '':
-            file_path = arm.utils.get_sdk_path() + '/armory/Sources/armory/trait/' + t.name + '.hx'
+            file_path = arm.utils.get_sdk_path() + '/lib/armory/Sources/armory/trait/' + t.name + '.hx'
             if os.path.exists(file_path):
                 arm.utils.fetch_script_props(file_path)
                 arm.utils.fetch_prop(o)
@@ -343,7 +343,7 @@ class ArmEditBundledScriptButton(bpy.types.Operator):
         item = obj.arm_traitlist[obj.arm_traitlist_index]
 
         pkg = arm.utils.safestr(bpy.data.worlds['Arm'].arm_project_package)
-        source_hx_path = os.path.join(sdk_path, 'armory', 'Sources', 'armory', 'trait', item.class_name_prop + '.hx')
+        source_hx_path = os.path.join(sdk_path, 'lib', 'armory', 'Sources', 'armory', 'trait', item.class_name_prop + '.hx')
         target_dir = os.path.join(project_path, 'Sources', pkg)
         target_hx_path = os.path.join(target_dir, item.class_name_prop + '.hx')
 

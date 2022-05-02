@@ -206,7 +206,7 @@ def load_library(asset_name):
     if bpy.data.filepath.endswith('arm_data.blend'): # Prevent load in library itself
         return
     sdk_path = arm.utils.get_sdk_path()
-    data_path = sdk_path + '/armory/blender/data/arm_data.blend'
+    data_path = sdk_path + '/lib/armory/blender/data/arm_data.blend'
     data_names = [asset_name]
 
     # Import

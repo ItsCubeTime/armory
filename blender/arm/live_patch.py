@@ -79,15 +79,13 @@ def patch_export():
 
         dir_std_shaders_dst = os.path.join(arm.utils.build_dir(), 'compiled', 'Shaders', 'std')
         if not os.path.isdir(dir_std_shaders_dst):
-            dir_std_shaders_src = os.path.join(arm.utils.get_sdk_path(), 'armory', 'Shaders', 'std')
+            dir_std_shaders_src = os.path.join(arm.utils.get_sdk_path(), 'lib', 'armory', 'Shaders', 'std')
             shutil.copytree(dir_std_shaders_src, dir_std_shaders_dst)
 
-        node_path = arm.utils.get_node_path()
-        khamake_path = arm.utils.get_khamake_path()
+        kmake_path = arm.utils.get_kmake_path()
         cmd = [
-            node_path, khamake_path, 'krom',
+            kmake_path,
             '--shaderversion', '330',
-            '--parallelAssetConversion', '4',
             '--to', arm.utils.build_dir() + '/debug',
             '--nohaxe',
             '--noproject'

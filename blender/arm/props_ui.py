@@ -418,7 +418,7 @@ class ARM_OT_NewCustomMaterial(bpy.types.Operator):
             return {'CANCELLED'}
 
         project_dir = arm.utils.get_fp()
-        shader_dir_src = os.path.join(arm.utils.get_sdk_path(), 'armory', 'Shaders', 'custom_mat_presets')
+        shader_dir_src = os.path.join(arm.utils.get_sdk_path(), 'lib', 'armory', 'Shaders', 'custom_mat_presets')
         shader_dir_dst = os.path.join(project_dir, 'Shaders')
         mat_name = arm.utils.safestr(self.mat_name)
         mat_dir = os.path.join(project_dir, 'Bundled', mat_name)

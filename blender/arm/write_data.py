@@ -54,7 +54,7 @@ def add_assets(path: str, quality=1.0, use_data_dir=False, rel_path=False) -> st
 def add_shaders(path: str, rel_path=False) -> str:
     if rel_path:
         path = os.path.relpath(path, arm.utils.get_fp())
-    return 'project.addShaders("' + path.replace('\\', '/').replace('//', '/') + '");\n'
+    return 'project.addShaders("' + path.replace('\\', '/').replace('//', '/') + '", { embed: false });\n'
 
 
 def remove_readonly(func, path, excinfo):
@@ -109,9 +109,9 @@ project.addSources('Sources');
 
         # Add engine sources if the project does not use its own armory/iron versions
         if not os.path.exists(os.path.join('Libraries', 'armory')):
-            khafile.write(add_armory_library(sdk_path, 'armory', rel_path=do_relpath_sdk))
+            khafile.write(add_armory_library(sdk_path + '/lib/', 'armory', rel_path=do_relpath_sdk))
         if not os.path.exists(os.path.join('Libraries', 'iron')):
-            khafile.write(add_armory_library(sdk_path, 'iron', rel_path=do_relpath_sdk))
+            khafile.write(add_armory_library(sdk_path + '/lib/', 'iron', rel_path=do_relpath_sdk))
 
         # Project libraries
         if os.path.exists('Libraries'):
@@ -202,27 +202,27 @@ project.addSources('Sources');
             khafile.write("project.addParameter('" + import_traits[i] + "');\n")
             khafile.write("""project.addParameter("--macro keep('""" + import_traits[i] + """')");\n""")
 
-        noembed = wrd.arm_cache_build and not is_publish and state.target == 'krom'
-        if noembed:
+        embed = False # not (wrd.arm_cache_build and not is_publish and state.target == 'krom')
+        if not embed:
             # Load shaders manually
             assets.add_khafile_def('arm_noembed')
 
-        noembed = False # TODO: always embed shaders for now, check compatibility with haxe compile server
+        khafile.write(add_shaders(sdk_path + "/armorcore/Shaders/*.glsl", rel_path=do_relpath_sdk))
 
         shaders_path = build_dir + '/compiled/Shaders/*.glsl'
         if rel_path:
             shaders_path = os.path.relpath(shaders_path, project_path).replace('\\', '/')
-        khafile.write('project.addShaders("' + shaders_path + '", { noembed: ' + str(noembed).lower() + '});\n')
+        khafile.write('project.addShaders("' + shaders_path + '", { embed: ' + str(embed).lower() + '});\n')
 
         if arm.utils.get_gapi() == 'direct3d11':
             # noprocessing flag - gets renamed to .d3d11
             shaders_path = build_dir + '/compiled/Hlsl/*.glsl'
             if rel_path:
                 shaders_path = os.path.relpath(shaders_path, project_path).replace('\\', '/')
-            khafile.write('project.addShaders("' + shaders_path + '", { noprocessing: true, noembed: ' + str(noembed).lower() + ' });\n')
+            khafile.write('project.addShaders("' + shaders_path + '", { noprocessing: true, embed: ' + str(embed).lower() + ' });\n')
 
         # Move assets for published game to /data folder
-        use_data_dir = is_publish and (state.target == 'krom-windows' or state.target == 'krom-linux' or state.target == 'windows-hl' or state.target == 'linux-hl')
+        use_data_dir = True # is_publish and (state.target == 'krom-windows' or state.target == 'krom-linux' or state.target == 'windows-hl' or state.target == 'linux-hl')
         if use_data_dir:
             assets.add_khafile_def('arm_data_dir')
 
@@ -274,7 +274,7 @@ project.addSources('Sources');
 
         if wrd.arm_debug_console:
             assets.add_khafile_def('arm_debug')
-            khafile.write(add_shaders(sdk_path + "/armory/Shaders/debug_draw/**", rel_path=do_relpath_sdk))
+            khafile.write(add_shaders(sdk_path + "/lib/armory/Shaders/debug_draw/**", rel_path=do_relpath_sdk))
 
         if not is_publish and state.target == 'html5':
             khafile.write("project.addParameter('--debug');\n")
@@ -285,7 +285,7 @@ project.addSources('Sources');
         if export_ui:
             if not os.path.exists('Libraries/zui'):
                 khafile.write(add_armory_library(sdk_path, 'lib/zui', rel_path=do_relpath_sdk))
-            p = sdk_path + '/armory/Assets/font_default.ttf'
+            p = sdk_path + '/lib/armory/Assets/font_default.ttf'
             p = p.replace('//', '/')
             khafile.write(add_assets(p.replace('\\', '/'), use_data_dir=use_data_dir, rel_path=do_relpath_sdk))
             assets.add_khafile_def('arm_ui')
@@ -463,6 +463,10 @@ class Main {
 
         f.write("""
     public static function main() {""")
+
+        f.write("""
+        iron.data.ShaderData.shaderPath = "";""") # Use arm_data_dir
+
         if rpdat.arm_skin != 'Off':
             f.write("""
         iron.object.BoneAnimation.skinMaxBones = """ + str(rpdat.arm_skin_max_bones) + """;""")

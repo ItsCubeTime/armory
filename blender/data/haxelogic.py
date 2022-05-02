@@ -30,7 +30,7 @@ def socket_type(s):
 	else:
 		return s
 
-# path = '/Users/lubos/Downloads/Armory/armsdk/armory/blender/arm/logicnode'
+# path = '/Users/lubos/Downloads/Armory/armsdk/lib/armory/blender/arm/logicnode'
 path = sys.argv[1]
 modules = glob.glob(path + "/*.py")
 out = {}
