@@ -359,13 +359,14 @@ def compile(assets_only=False):
 
     #Project needs to be compiled at least once
     #before compilation server can work
-    if not os.path.exists(arm.utils.build_dir() + '/debug/krom/krom.js') and not state.is_publish:
-       state.proc_build = run_proc(cmd, build_done)
-    else:
-        if assets_only or compilation_server:
-            cmd.append('--nohaxe')
-            cmd.append('--noproject')
-        state.proc_build = run_proc(cmd, assets_done if compilation_server else build_done)
+    # if not os.path.exists(arm.utils.build_dir() + '/debug/krom/krom.js') and not state.is_publish:
+    #    state.proc_build = run_proc(cmd, build_done)
+    # else:
+    #     if assets_only or compilation_server:
+    #         cmd.append('--nohaxe')
+    #         cmd.append('--noproject')
+    #     state.proc_build = run_proc(cmd, assets_done if compilation_server else build_done)
+    state.proc_build = run_proc(cmd, build_done)
 
 def build(target, is_play=False, is_publish=False, is_export=False):
     global profile_time
