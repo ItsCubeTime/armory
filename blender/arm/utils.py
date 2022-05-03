@@ -183,7 +183,7 @@ def get_gapi():
         item = wrd.arm_exporterlist[wrd.arm_exporterlist_index]
         return getattr(item, target_to_gapi(item.arm_project_target))
     if wrd.arm_runtime == 'Browser':
-        return 'webgl'
+        return 'opengl'
     return 'direct3d11' if get_os() == 'win' else 'opengl'
 
 

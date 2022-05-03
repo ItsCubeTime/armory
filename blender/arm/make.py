@@ -285,8 +285,8 @@ def compile(assets_only=False):
     cmd = [kmake_path, "--from", arm.utils.get_kha_path()]
 
     kha_target_name = arm.utils.get_kha_target(target_name)
-    # if kha_target_name != '':
-    #     cmd.append(kha_target_name)
+    if kha_target_name != '' and kha_target_name != 'krom':
+        cmd.append(kha_target_name)
 
     # Custom exporter
     if state.is_export:
