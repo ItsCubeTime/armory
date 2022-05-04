@@ -129,6 +129,7 @@ project.addSources('Sources');
 
         if state.target.startswith('krom'):
             assets.add_khafile_def('js-es=6')
+            assets.add_khafile_def('arm_use_k_images')
 
         if export_physics:
             assets.add_khafile_def('arm_physics')
