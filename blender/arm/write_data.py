@@ -127,9 +127,10 @@ project.addSources('Sources');
                 if os.path.isdir('Subprojects/' + lib):
                     khafile.write('await project.addProject("Subprojects/{0}");\n'.format(lib))
 
+        assets.add_khafile_def('arm_use_k_images')
+
         if state.target.startswith('krom'):
             assets.add_khafile_def('js-es=6')
-            assets.add_khafile_def('arm_use_k_images')
 
         if export_physics:
             assets.add_khafile_def('arm_physics')
