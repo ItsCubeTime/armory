@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 import os
 import shutil
@@ -41,6 +42,95 @@ if arm.is_reload(__name__):
     arm.utils = arm.reload_module(arm.utils)
 else:
     arm.enable_reload(__name__)
+
+
+import bpy
+class ArmUIPropertyGroup(bpy.types.PropertyGroup):
+    show_editor_time_warnings: bpy.props.BoolProperty(
+           name="Show editor time warnings",
+           description="Template",
+           default=True)
+
+
+def label_multiline(text: str, context: bpy.types.Context, parent: bpy.types.UILayout, bullet: bool = False, bulletSymbol: str = "*"):
+    "Same as UILayout.label except with line splitting. If bullet is True we will put an asterix * before the first line and indent the rest."
+    text = str(text)
+    textListSplitByNewLines = text.split('\n')
+    import textwrap
+    for text in textListSplitByNewLines:
+
+        chars = int(context.region.width / 7)   # 7 pix on 1 character
+        amountOfSpaceNecessary = "  "
+        i = -1
+        while bulletSymbol.__len__() > i:
+            i += 1
+            amountOfSpaceNecessary += " "
+        if bullet:
+            wrapper = textwrap.TextWrapper(width=chars, initial_indent=f" {bulletSymbol} ", subsequent_indent=amountOfSpaceNecessary)
+        else:
+            wrapper = textwrap.TextWrapper(width=chars)
+        text_lines = wrapper.wrap(text=text)
+        for text_line in text_lines:
+            parent.label(text=text_line)
+
+
+class WarningSeverityLevels(): # Unfortunately this cant go inside EditorTimeWarnings as Python wont then let me reference it for default values in function parameters within EditorTimeWarnings.
+    """Do not instanciate me. Used inside of EditorTimeWarnings. Should be treated like an ENUM, I advice against typing severity levels as raw strings, 
+    
+    instead when passing severity levels to say a constructor or as function arguments, type something like: funcImCalling(WarningSeverityLevels.LOW)"""
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    SEVERE = "SEVERE"
+class EditorTimeWarnings():
+    "Do not instanciate me. Im responsible for keeping track of warnings that will later be displayed under the Armory Player panel."
+    class EditorTimeWarning():
+        "Instanciate me and append the instance to __listOfWarnings__. Im castable to string to get the formatted warning message."
+        def __init__(self, warningHeaderOrSettingsName: str, warningDescription: str, severityLevel: EditorTimeWarnings.SeverityLevels = WarningSeverityLevels.NORMAL) -> None:
+            self.warningHeaderOrSettingsName = warningHeaderOrSettingsName
+            self.warningDescription = warningDescription
+            self.severityLevel = severityLevel
+
+        def __eq__(self, other: EditorTimeWarnings.EditorTimeWarning):
+            returnValue = self.warningHeaderOrSettingsName == other.warningHeaderOrSettingsName
+            return returnValue
+
+        def __str__(self) -> str:
+            if self.severityLevel in [WarningSeverityLevels.NORMAL, WarningSeverityLevels.LOW]:
+                return f"{self.warningHeaderOrSettingsName} - {self.warningDescription}"
+            else:
+                return f"{self.severityLevel} - {self.warningHeaderOrSettingsName} - {self.warningDescription}"
+
+    def registerWarning(warningHeaderOrSettingsName: str, warningDescription: str, displayWarningInline = False, context: bpy.types.Context = None, layout: bpy.types.UILayout = None, severityLevel: WarningSeverityLevels = WarningSeverityLevels.NORMAL):
+        returnValue = False
+        editorTimeWarning = EditorTimeWarnings.EditorTimeWarning(warningHeaderOrSettingsName, warningDescription, severityLevel)
+
+        if not editorTimeWarning in EditorTimeWarnings.__listOfWarnings__:
+            EditorTimeWarnings.__listOfWarnings__.append(editorTimeWarning)
+            returnValue = True
+
+        if displayWarningInline:
+            warningColumn = layout.column()
+            warningColumn.alert = True
+            label_multiline(str(editorTimeWarning), context, warningColumn)
+        return returnValue
+
+    def unregisterWarning(warningHeaderOrSettingsName: str):
+        editorTimeWarning = EditorTimeWarnings.EditorTimeWarning(warningHeaderOrSettingsName, "")
+        returnValue = False
+        while editorTimeWarning in EditorTimeWarnings.__listOfWarnings__:
+            EditorTimeWarnings.__listOfWarnings__.remove(editorTimeWarning)
+            returnValue = True
+        return returnValue
+
+    def getListOfWarnings():
+        return EditorTimeWarnings.__listOfWarnings__
+
+    __listOfWarnings__: list[EditorTimeWarning] = []
+
+
+
+
 
 
 class ARM_PT_ObjectPropsPanel(bpy.types.Panel):
@@ -480,80 +570,6 @@ class ARM_OT_NewCustomMaterial(bpy.types.Operator):
         return{'FINISHED'}
 
 
-class ARM_PG_BindTexturesListItem(bpy.types.PropertyGroup):
-    uniform_name: StringProperty(
-        name='Uniform Name',
-        description='The name of the sampler uniform as used in the shader',
-        default='ImageTexture',
-    )
-
-    image: PointerProperty(
-        name='Image',
-        type=bpy.types.Image,
-        description='The image to attach to the texture unit',
-    )
-
-
-class ARM_UL_BindTexturesList(bpy.types.UIList):
-    def draw_item(self, context, layout, data, item: ARM_PG_BindTexturesListItem, icon, active_data, active_propname, index):
-        row = layout.row(align=True)
-
-        if item.image is not None:
-            row.label(text=item.uniform_name, icon_value=item.image.preview.icon_id)
-        else:
-            row.label(text='<empty>', icon='ERROR')
-
-
-class ARM_OT_BindTexturesListNewItem(bpy.types.Operator):
-    bl_idname = "arm_bind_textures_list.new_item"
-    bl_label = "Add Texture Binding"
-    bl_description = "Add a new texture binding to the list"
-    bl_options = {'INTERNAL'}
-
-    @classmethod
-    def poll(cls, context):
-        mat = context.material
-        if mat is None:
-            return False
-        return True
-
-    def execute(self, context):
-        mat = context.material
-        mat.arm_bind_textures_list.add()
-        mat.arm_bind_textures_list_index = len(mat.arm_bind_textures_list) - 1
-        return{'FINISHED'}
-
-
-class ARM_OT_BindTexturesListDeleteItem(bpy.types.Operator):
-    bl_idname = "arm_bind_textures_list.delete_item"
-    bl_label = "Remove Texture Binding"
-    bl_description = "Delete the selected texture binding from the list"
-    bl_options = {'INTERNAL'}
-
-    @classmethod
-    def poll(cls, context):
-        mat = context.material
-        if mat is None:
-            return False
-        return len(mat.arm_bind_textures_list) > 0
-
-    def execute(self, context):
-        mat = context.material
-        lst = mat.arm_bind_textures_list
-        index = mat.arm_bind_textures_list_index
-
-        if len(lst) <= index:
-            return{'FINISHED'}
-
-        lst.remove(index)
-
-        if index > 0:
-            index = index - 1
-        mat.arm_bind_textures_list_index = index
-
-        return{'FINISHED'}
-
-
 class ARM_PT_MaterialPropsPanel(bpy.types.Panel):
     bl_label = "Armory Props"
     bl_space_type = "PROPERTIES"
@@ -579,7 +595,6 @@ class ARM_PT_MaterialPropsPanel(bpy.types.Panel):
         columnb.enabled = not mat.arm_two_sided
         columnb.prop(mat, 'arm_cull_mode')
         layout.prop(mat, 'arm_material_id')
-        layout.prop(mat, 'arm_depth_read')
         layout.prop(mat, 'arm_overlay')
         layout.prop(mat, 'arm_decal')
         layout.prop(mat, 'arm_discard')
@@ -595,52 +610,6 @@ class ARM_PT_MaterialPropsPanel(bpy.types.Panel):
         layout.prop(mat, 'arm_billboard')
 
         layout.operator("arm.invalidate_material_cache")
-
-
-class ARM_PT_BindTexturesPropsPanel(bpy.types.Panel):
-    bl_label = "Bind Textures"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "material"
-    bl_options = {'DEFAULT_CLOSED'}
-    bl_parent_id = "ARM_PT_MaterialPropsPanel"
-
-    @classmethod
-    def poll(cls, context):
-        mat = context.material
-        if mat is None:
-            return False
-
-        return mat.arm_custom_material != ''
-
-    def draw(self, context):
-        layout = self.layout
-        layout.use_property_split = True
-        layout.use_property_decorate = False
-        mat = bpy.context.material
-        if mat is None:
-            return
-
-        row = layout.row(align=True)
-        col = row.column(align=True)
-        col.template_list('ARM_UL_BindTexturesList', '', mat, 'arm_bind_textures_list', mat, 'arm_bind_textures_list_index')
-
-        if mat.arm_bind_textures_list_index >= 0 and len(mat.arm_bind_textures_list) > 0:
-            item = mat.arm_bind_textures_list[mat.arm_bind_textures_list_index]
-            box = col.box()
-
-            if item.image is None:
-                _row = box.row()
-                _row.alert = True
-                _row.alignment = 'RIGHT'
-                _row.label(text="No image selected, skipping export")
-
-            box.prop(item, 'uniform_name')
-            box.prop(item, 'image')
-
-        col = row.column(align=True)
-        col.operator("arm_bind_textures_list.new_item", icon='ADD', text="")
-        col.operator("arm_bind_textures_list.delete_item", icon='REMOVE', text="")
 
 
 class ARM_PT_MaterialDriverPropsPanel(bpy.types.Panel):
@@ -758,6 +727,23 @@ class ARM_PT_ArmoryPlayerPanel(bpy.types.Panel):
             col.label(text=f'{log.num_errors} {errors} occurred during compilation!', icon='CANCEL')
             # Blank icon to achieve the same indentation as the line before
             col.label(text='Please open the console to get more information.', icon='BLANK1')
+
+        listOfWarnings = EditorTimeWarnings.getListOfWarnings()
+        if listOfWarnings.__len__() > 0:
+            warningBox = layout.box()
+            bpy.context.scene.arm_ui.show_editor_time_warnings
+            warningBoxInner = warningBox.box().split(factor=0.15)
+            warningBoxInner.prop(bpy.context.scene.arm_ui, 'show_editor_time_warnings', text="", icon='TRIA_DOWN' if bpy.context.scene.arm_ui.show_editor_time_warnings else 'TRIA_RIGHT', emboss=False, icon_only=True, expand=False)
+            warningBoxInner.label(text="Display warnings", icon='ERROR')
+            warningBoxAlert = warningBox.column()
+            if bpy.context.scene.arm_ui.show_editor_time_warnings:
+                warningBoxAlert.alert = True
+                warningBoxAlert.label(text="Potential Issues Detected:")
+                i = 0
+                for warning in listOfWarnings:
+                    i += 1
+                    warningBoxAlertInner = warningBoxAlert.box()
+                    label_multiline(f"{str(warning)}", context, warningBoxAlertInner, True, f"{i}.")
 
 class ARM_PT_ArmoryExporterPanel(bpy.types.Panel):
     bl_label = "Armory Exporter"
@@ -1444,7 +1430,6 @@ class ARM_PT_RenderPathRendererPanel(bpy.types.Panel):
         layout.prop(rpdat, 'rp_overlays_state')
         layout.prop(rpdat, 'rp_decals_state')
         layout.prop(rpdat, 'rp_blending_state')
-        layout.prop(rpdat, 'rp_depth_texture_state')
         layout.prop(rpdat, 'rp_draw_order')
         layout.prop(rpdat, 'arm_samples_per_pixel')
         layout.prop(rpdat, 'arm_texture_filter')
@@ -1546,6 +1531,11 @@ class ARM_PT_RenderPathShadowsPanel(bpy.types.Panel):
         layout.separator()
 
         layout.prop(rpdat, 'rp_shadowmap_atlas')
+        if (not rpdat.rp_shadowmap_atlas) and os.name == 'nt':
+            EditorTimeWarnings.registerWarning("Armory Render Path > Shadows > Shadow Map Atlasing", "Known to prevent Armory from starting on Windows when there are more than 2 scene lights.", True, context, layout)
+        else:
+            EditorTimeWarnings.unregisterWarning("Armory Render Path > Shadows > Shadow Map Atlasing")
+
         colatlas = layout.column()
         colatlas.enabled = rpdat.rp_shadowmap_atlas
         colatlas.prop(rpdat, 'rp_max_lights')
@@ -2242,6 +2232,17 @@ class ARM_PT_ProxyPanel(bpy.types.Panel):
             row = layout.row(align=True)
             row.operator("arm.proxy_toggle_all")
             row.operator("arm.proxy_apply_all")
+            
+class ARM_PT_DeveloperTools(bpy.types.Panel):
+    bl_label = "Armory Developer Tools"
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_context = "render"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        self.layout.operator("arm.reload_blender_addon")
+
 
 class ArmMakeProxyButton(bpy.types.Operator):
     '''Create proxy from linked object'''
@@ -2666,6 +2667,10 @@ def draw_conditional_prop(layout: bpy.types.UILayout, heading: str, data: bpy.ty
 
 
 def register():
+    
+    bpy.utils.register_class(ArmUIPropertyGroup)
+    bpy.types.Scene.arm_ui = PointerProperty(type=ArmUIPropertyGroup)
+
     bpy.utils.register_class(ARM_PT_ObjectPropsPanel)
     bpy.utils.register_class(ARM_PT_ModifiersPropsPanel)
     bpy.utils.register_class(ARM_PT_ParticlesPropsPanel)
@@ -2676,12 +2681,7 @@ def register():
     bpy.utils.register_class(InvalidateCacheButton)
     bpy.utils.register_class(InvalidateMaterialCacheButton)
     bpy.utils.register_class(ARM_OT_NewCustomMaterial)
-    bpy.utils.register_class(ARM_PG_BindTexturesListItem)
-    bpy.utils.register_class(ARM_UL_BindTexturesList)
-    bpy.utils.register_class(ARM_OT_BindTexturesListNewItem)
-    bpy.utils.register_class(ARM_OT_BindTexturesListDeleteItem)
     bpy.utils.register_class(ARM_PT_MaterialPropsPanel)
-    bpy.utils.register_class(ARM_PT_BindTexturesPropsPanel)
     bpy.utils.register_class(ARM_PT_MaterialBlendingPropsPanel)
     bpy.utils.register_class(ARM_PT_MaterialDriverPropsPanel)
     bpy.utils.register_class(ARM_PT_ArmoryPlayerPanel)
@@ -2742,15 +2742,19 @@ def register():
     bpy.utils.register_class(scene.TLM_PT_Utility)
     bpy.utils.register_class(scene.TLM_PT_Additional)
 
+    # bpy.utils.register_class(ArmReloadBlenderAddon)
+    bpy.utils.register_class(ARM_PT_DeveloperTools)
+
     bpy.types.VIEW3D_HT_header.append(draw_view3d_header)
     bpy.types.VIEW3D_MT_object.append(draw_view3d_object_menu)
     bpy.types.NODE_MT_context_menu.append(draw_custom_node_menu)
 
-    bpy.types.Material.arm_bind_textures_list = CollectionProperty(type=ARM_PG_BindTexturesListItem)
-    bpy.types.Material.arm_bind_textures_list_index = IntProperty(name='Index for arm_bind_textures_list', default=0)
-
 
 def unregister():
+    bpy.utils.unregister_class(ArmUIPropertyGroup)
+
+    # bpy.utils.unregister_class(ArmReloadBlenderAddon)
+    bpy.utils.unregister_class(ARM_PT_DeveloperTools)
     bpy.types.NODE_MT_context_menu.remove(draw_custom_node_menu)
     bpy.types.VIEW3D_MT_object.remove(draw_view3d_object_menu)
     bpy.types.VIEW3D_HT_header.remove(draw_view3d_header)
@@ -2774,12 +2778,7 @@ def unregister():
     bpy.utils.unregister_class(ARM_OT_NewCustomMaterial)
     bpy.utils.unregister_class(ARM_PT_MaterialDriverPropsPanel)
     bpy.utils.unregister_class(ARM_PT_MaterialBlendingPropsPanel)
-    bpy.utils.unregister_class(ARM_PT_BindTexturesPropsPanel)
     bpy.utils.unregister_class(ARM_PT_MaterialPropsPanel)
-    bpy.utils.unregister_class(ARM_OT_BindTexturesListDeleteItem)
-    bpy.utils.unregister_class(ARM_OT_BindTexturesListNewItem)
-    bpy.utils.unregister_class(ARM_UL_BindTexturesList)
-    bpy.utils.unregister_class(ARM_PG_BindTexturesListItem)
     bpy.utils.unregister_class(ARM_PT_ArmoryPlayerPanel)
     bpy.utils.unregister_class(ARM_PT_ArmoryExporterWindowsSettingsPanel)
     bpy.utils.unregister_class(ARM_PT_ArmoryExporterHTML5SettingsPanel)
